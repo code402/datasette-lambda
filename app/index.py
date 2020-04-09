@@ -9,10 +9,12 @@ from datasette.app import Datasette, DEFAULT_CONFIG, CONFIG_OPTIONS, pm
 
 S3_BUCKET = os.environ['Bucket']
 DB_FILE = '/tmp/db.db'
+DB_FILE_TMP = '/tmp/db.db.tmp'
 
 if not os.path.exists(DB_FILE):
     s3 = boto3.client('s3')
-    s3.download_file(S3_BUCKET, 'db.db', DB_FILE)
+    s3.download_file(S3_BUCKET, 'db.db', DB_FILE_TMP)
+    os.rename(DB_FILE_TMP, DB_FILE)
 
 ds = Datasette(
     [DB_FILE], #files,

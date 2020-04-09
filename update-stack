@@ -9,6 +9,21 @@ stack_exists() {
   aws cloudformation describe-stacks --stack-name "${stack_name}" &> /dev/null
 }
 
+has_s3patch() {
+  which s3patch > /dev/null
+}
+
+s3cp() {
+  from=${1:?must specify local file, e.g. file.zip}
+  to=${2:?must specify remote file, e.g. s3://bucket/key}
+
+  if has_s3patch; then
+    s3patch -v cp "${from}" "${to}"
+  else
+    aws s3 cp "${from}" "${to}"
+  fi
+}
+
 main() {
   stack_name=${1:?must provide CloudFormation stack name}
   db=${2:?must provide SQLite db}
@@ -38,7 +53,7 @@ main() {
     zip -r ../package.zip .
     popd
 
-    aws s3 cp package.zip s3://"$bucket"/package.zip
+    s3cp package.zip s3://"$bucket"/package.zip
   fi
 
   cmd="update-stack"
@@ -51,7 +66,7 @@ main() {
   aws cloudformation "$cmd" --capabilities CAPABILITY_IAM --stack-name="${stack_name}-lambda" --parameters ParameterKey=Bucket,ParameterValue="${bucket}" --template-body=file://stack-lambda.yaml
   aws cloudformation wait "$wait_cmd" --stack-name="${stack_name}-lambda"
 
-  aws s3 cp "${db}" s3://"${bucket}"/db.db
+  s3cp "${db}" s3://"${bucket}"/db.db
 
   lambda=$(aws cloudformation describe-stack-resources --stack-name "${stack_name}-lambda" --logical-resource-id LambdaFunction --query StackResources[0].PhysicalResourceId --output text)
   aws lambda update-function-code --function-name "$lambda" --s3-bucket "${bucket}" --s3-key package.zip
