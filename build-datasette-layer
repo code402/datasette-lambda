@@ -1,0 +1,38 @@
+#!/bin/bash
+set -euo pipefail
+
+# A script to publish a new Python Lambda layer with Datasette and its dependencies.
+# Note that until https://github.com/simonw/datasette/pull/719 is merged, that
+# changeset needs to be applied manually to work with Mangum's ASGI implementation.
+
+version=${1:?must specify version, e.g. 0.39}
+ip=${2:?must specify IP of build server, e.g. 3.84.100.13}
+
+commands() {
+  version=${1:?must specify version tag, e.g. 0.39}
+  echo "export version=${version}"
+  cat <<'EOF'
+export version_str="${version/./_}"
+sudo yum update -y
+sudo yum install python3 -y
+sudo python3 -m pip install --upgrade pip
+pip3 install datasette mangum -t python/
+chmod -R 755 .
+zip -r package.zip python
+AWS_PROFILE=code402 aws s3 cp package.zip "s3://code402/datasette-${version}.zip"
+AWS_PROFILE=code402 aws lambda publish-layer-version --region us-east-1 --layer-name "datasette-${version_str}" --description "datasette ${version}" --license-info Apache-2.0 --content "S3Bucket=code402,S3Key=datasette-${version}.zip" --compatible-runtimes python3.8
+EOF
+}
+
+ssh() {
+  /usr/bin/ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ec2-user@"$ip" "$@"
+}
+
+scp() {
+  /usr/bin/scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$1" ec2-user@"$ip":"$2"
+}
+
+
+ssh mkdir -p /home/ec2-user/.aws
+scp ~/.aws/credentials /home/ec2-user/.aws/
+commands "$version" | ssh

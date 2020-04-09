@@ -1,0 +1,6 @@
+#!/bin/bash
+set -euo pipefail
+
+stack=${1:?must specify stack name}
+log_group=$(aws cloudformation describe-stack-resources --stack-name "${stack}"-lambda  --query 'StackResources[?LogicalResourceId==`LambdaLogGroup`] | [0].PhysicalResourceId' --output text)
+exec saw watch "${log_group}" --region us-east-1

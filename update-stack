@@ -1,0 +1,62 @@
+#!/bin/bash
+
+set -euo pipefail
+set -x
+
+stack_exists() {
+  local stack_name
+  stack_name=${1:?must provide stack name}
+  aws cloudformation describe-stacks --stack-name "${stack_name}" &> /dev/null
+}
+
+main() {
+  stack_name=${1:?must provide CloudFormation stack name}
+  db=${2:?must provide SQLite db}
+
+  if [ ! -e "${db}" ]; then
+    echo "error: cannot find database ${db}" > /dev/stderr
+    exit 2
+  fi
+
+  # If the stack does not exist, create it. Warn that the user has to do a manual step
+  # with DNS.
+  cmd="update-stack"
+  if ! stack_exists "${stack_name}"; then
+    cmd="create-stack"
+  fi
+  wait_cmd=${cmd/-stack/}
+  wait_cmd="stack-${wait_cmd}-complete"
+
+  aws cloudformation "$cmd" --stack-name="${stack_name}" --template-body=file://stack-prereq.yaml
+  aws cloudformation wait "$wait_cmd" --stack-name="${stack_name}"
+
+  bucket=$(aws cloudformation describe-stack-resources --stack-name "${stack_name}" --logical-resource-id S3Bucket --query StackResources[0].PhysicalResourceId --output text)
+
+  if true; then
+    rm -f package.zip
+    pushd app
+    zip -r ../package.zip .
+    popd
+
+    aws s3 cp package.zip s3://"$bucket"/package.zip
+  fi
+
+  cmd="update-stack"
+  if ! stack_exists "${stack_name}-lambda"; then
+    cmd="create-stack"
+  fi
+  wait_cmd=${cmd/-stack/}
+  wait_cmd="stack-${wait_cmd}-complete"
+
+  aws cloudformation "$cmd" --capabilities CAPABILITY_IAM --stack-name="${stack_name}-lambda" --parameters ParameterKey=Bucket,ParameterValue="${bucket}" --template-body=file://stack-lambda.yaml
+  aws cloudformation wait "$wait_cmd" --stack-name="${stack_name}-lambda"
+
+  aws s3 cp "${db}" s3://"${bucket}"/db.db
+
+  lambda=$(aws cloudformation describe-stack-resources --stack-name "${stack_name}-lambda" --logical-resource-id LambdaFunction --query StackResources[0].PhysicalResourceId --output text)
+  aws lambda update-function-code --function-name "$lambda" --s3-bucket "${bucket}" --s3-key package.zip
+
+  aws cloudformation describe-stacks --stack-name "${stack_name}"-lambda --query Stacks[0].Outputs[0].OutputValue --output text
+}
+
+main "$@"
