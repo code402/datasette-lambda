@@ -14,6 +14,9 @@ cd datasette-lambda
 ./update-stack northwinds northwinds.db`
 ```
 
+Some Datasette flags are supported:
+- `--metadata <metadata.json>`, to provide [metadata](https://datasette.readthedocs.io/en/stable/metadata.html)
+
 A CloudFormation stack will be created (or updated) with an S3 bucket.
 
 The stub code and SQLite database(s) will be uploaded to the S3 bucket.
@@ -41,7 +44,7 @@ Run `./delete-stack <stack-name>` to tear down the infrastructure.
 - [x] Create a CloudFront distribution
 - [ ] Optionally be able to use a custom domain name on CloudFront
 - [ ] Parity: Support CORS flag
-- [ ] Parity: Support metadata flag
+- [x] Parity: Support metadata flag
 - [ ] Parity: Support config options
 
 Maybe:

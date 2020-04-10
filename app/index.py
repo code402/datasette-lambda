@@ -9,6 +9,7 @@ from datasette.app import Datasette, DEFAULT_CONFIG, CONFIG_OPTIONS, pm
 
 S3_BUCKET = os.environ['Bucket']
 DB_FILES = os.environ['DbFiles'].split('@')
+METADATA_PATH = '/var/task/metadata.json'
 
 files = []
 
@@ -39,13 +40,17 @@ if not files:
 
         files.append(file)
 
+metadata = {}
+if os.path.exists(METADATA_PATH):
+    metadata = json.loads(open(METADATA_PATH).read())
+
 ds = Datasette(
     files,
     immutables=[],
     cache_headers=True,
     cors=True,
     inspect_data=None,
-    metadata=None, #metadata_data,
+    metadata=metadata,
     sqlite_extensions=None, #sqlite_extensions,
     template_dir=None, #template_dir,
     plugins_dir=None, #plugins_dir,
