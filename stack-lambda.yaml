@@ -6,6 +6,9 @@ Parameters:
     Type: String
   DbFiles:
     Type: String
+  CORS:
+    Type: String
+    AllowedPattern: ^True$|^False$
 
 Resources:
   LambdaFunction:
@@ -26,6 +29,7 @@ Resources:
       Environment:
         Variables:
           Bucket: !Sub ${Bucket}
+          CORS: !Sub ${CORS}
           DbFiles: !Sub ${DbFiles}
 
   LambdaIAMRole:

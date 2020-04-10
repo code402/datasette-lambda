@@ -7,6 +7,7 @@ logfile=$(mktemp)
 lambdazip=$(readlink -m package.zip)
 db_paths=()
 dbfiles=
+cors=False
 EXTERNAL=${EXTERNAL:-0}
 
 # Per https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html,
@@ -88,6 +89,9 @@ parse_opts() {
 
   while [ "$#" -gt 0 ]; do
     case "$1" in
+      --cors)
+        cors=True
+        ;;
       -m|--metadata)
         shift
         file=${1:?error: --metadata requires file argument}
@@ -169,6 +173,7 @@ main() {
     --capabilities CAPABILITY_IAM \
     --parameters \
       ParameterKey=Bucket,ParameterValue="${bucket}" \
+      ParameterKey=CORS,ParameterValue="${cors}" \
       ParameterKey=DbFiles,ParameterValue="${dbfiles}" \
     --template-body=file://stack-lambda.yaml
 

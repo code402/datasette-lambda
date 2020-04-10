@@ -8,6 +8,7 @@ from mangum import Mangum
 from datasette.app import Datasette, DEFAULT_CONFIG, CONFIG_OPTIONS, pm
 
 S3_BUCKET = os.environ['Bucket']
+CORS = os.environ['CORS'] == 'True'
 DB_FILES = os.environ['DbFiles'].split('@')
 METADATA_PATH = '/var/task/metadata.json'
 
@@ -48,7 +49,7 @@ ds = Datasette(
     files,
     immutables=[],
     cache_headers=True,
-    cors=True,
+    cors=CORS,
     inspect_data=None,
     metadata=metadata,
     sqlite_extensions=None, #sqlite_extensions,

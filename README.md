@@ -15,6 +15,7 @@ cd datasette-lambda
 ```
 
 Some Datasette flags are supported:
+- `--cors`, to enable `Access-Control-Allow-Origin: *` headers on responses
 - `--metadata <metadata.json>`, to provide [metadata](https://datasette.readthedocs.io/en/stable/metadata.html)
 
 A CloudFormation stack will be created (or updated) with an S3 bucket.
@@ -43,7 +44,7 @@ Run `./delete-stack <stack-name>` to tear down the infrastructure.
 - [x] Use the passed-in name of the DB as the DB name
 - [x] Create a CloudFront distribution
 - [ ] Optionally be able to use a custom domain name on CloudFront
-- [ ] Parity: Support CORS flag
+- [x] Parity: Support CORS flag
 - [x] Parity: Support metadata flag
 - [ ] Parity: Support config options
 
