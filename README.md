@@ -28,8 +28,8 @@ A CloudFormation stack will be created (or updated) with an S3 bucket.
 The stub code and SQLite database(s) will be uploaded to the S3 bucket.
 
 A second CloudFormation stack will then be created (or updated) with the necessary
-IAM roles, API Gateway and Lambda entities to expose your Datasette instance
-to the web.
+IAM roles, CloudFront, API Gateway and Lambda entities to expose your Datasette
+instance to the web.
 
 ### Watching logs
 
