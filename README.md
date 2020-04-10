@@ -6,11 +6,11 @@ Run [Datasette](https://github.com/simonw/datasette) on AWS API Gateway + AWS La
 
 ### Creating
 
-Run `./update-stack <stack-name> <sqlite.db>`, e.g. `./update-stack northwinds northwinds.db`
+Run `./update-stack <stack-name> <sqlite.db> [<sqlite.db> ...]`, e.g. `./update-stack northwinds northwinds.db`
 
 A CloudFormation stack will be created (or updated) with an S3 bucket.
 
-The stub code and SQLite database will be uploaded to the S3 bucket.
+The stub code and SQLite database(s) will be uploaded to the S3 bucket.
 
 A second CloudFormation stack will then be created (or updated) with the necessary
 IAM roles, API Gateway and Lambda entities to expose your Datasette instance
