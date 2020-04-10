@@ -6,11 +6,13 @@ import glob
 import boto3
 from mangum import Mangum
 from datasette.app import Datasette, DEFAULT_CONFIG, CONFIG_OPTIONS, pm
+from datasette.utils import value_as_boolean
 
 S3_BUCKET = os.environ['Bucket']
 CORS = os.environ['CORS'] == 'True'
 DB_FILES = os.environ['DbFiles'].split('@')
 METADATA_PATH = '/var/task/metadata.json'
+CONFIG_PATH = '/var/task/config.txt'
 
 files = []
 
@@ -45,6 +47,33 @@ metadata = {}
 if os.path.exists(METADATA_PATH):
     metadata = json.loads(open(METADATA_PATH).read())
 
+config = {}
+if os.path.exists(CONFIG_PATH):
+    for line in open(CONFIG_PATH):
+        if not line:
+            continue
+
+        line = line.strip()
+
+        if ':' not in line:
+            raise Exception('"{}" should be name:value'.format(line))
+
+        key = line[0:line.find(':')]
+        value = line[line.find(':') + 1:]
+
+        # This is a hack; properly we should be introspecting the annotations in cli.py.
+        # Still, this works for many of the common settings, so *shrug*.
+        if not key in DEFAULT_CONFIG:
+            raise Exception('unknown config setting: ' + key)
+
+        default = DEFAULT_CONFIG[key]
+        if isinstance(default, bool):
+            value = value_as_boolean(value)
+        elif isinstance(default, int):
+            value = int(value)
+
+        config[key] = value
+
 ds = Datasette(
     files,
     immutables=[],
@@ -56,11 +85,7 @@ ds = Datasette(
     template_dir=None, #template_dir,
     plugins_dir=None, #plugins_dir,
     static_mounts=None, #static,
-    config={
-        # NB: base_url is only needed if we permit users to specify a custom
-        #     prefix for their distribution
-#        'base_url': '/datasette/'
-    }, #dict(config),
+    config=config,
     memory=False, #memory,
     version_note=None #version_note,
 )

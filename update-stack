@@ -89,9 +89,16 @@ parse_opts() {
 
   while [ "$#" -gt 0 ]; do
     case "$1" in
+      --config)
+        shift
+        config_value=${1:?error: --config requires config value argument}
+        echo "${config_value}" >> app/config.txt
+        ;;
+
       --cors)
         cors=True
         ;;
+
       -m|--metadata)
         shift
         file=${1:?error: --metadata requires file argument}

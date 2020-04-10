@@ -6,7 +6,7 @@ Run [Datasette](https://github.com/simonw/datasette) on AWS API Gateway + AWS La
 
 ### Creating
 
-Clone the repo and run `./update-stack <stack-name> <sqlite.db> [<sqlite.db> ...]`, e.g.:
+Clone the repo and run `./update-stack <stack-name> [flags] <sqlite.db> [<sqlite.db> ...]`, e.g.:
 
 ```bash
 git clone https://github.com/code402/datasette-lambda.git
@@ -15,6 +15,7 @@ cd datasette-lambda
 ```
 
 Some Datasette flags are supported:
+- `--config key:value`, to set [config options](https://datasette.readthedocs.io/en/stable/config.html)
 - `--cors`, to enable `Access-Control-Allow-Origin: *` headers on responses
 - `--metadata <metadata.json>`, to provide [metadata](https://datasette.readthedocs.io/en/stable/metadata.html)
 
@@ -46,7 +47,7 @@ Run `./delete-stack <stack-name>` to tear down the infrastructure.
 - [ ] Optionally be able to use a custom domain name on CloudFront
 - [x] Parity: Support CORS flag
 - [x] Parity: Support metadata flag
-- [ ] Parity: Support config options
+- [x] Parity: Support config options
 
 Maybe:
 
