@@ -6,6 +6,8 @@ Run [Datasette](https://github.com/simonw/datasette) on AWS as a serverless appl
 
 Sufficiently small databases (unzipped size up to ~250 MB, zipped size up to ~50 MB) will be inlined in the Lambda deployment package. Others will be published to S3 and fetched on Lambda startup.
 
+You can see a demo using Datasette's fixtures db here: https://d2al83gq7ofbo9.cloudfront.net/
+
 ## Getting started
 
 ### Creating
