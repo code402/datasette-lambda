@@ -32,8 +32,8 @@ Run `./delete-stack <stack-name>` to tear down the infrastructure.
 - [x] Fix issue with `base_url` not always being respected in generated URLs (maybe issue in how we use Mangum?)
 - [ ] Be able to host multiple DBs
 - [ ] Use the passed-in name of the DB as the DB name
-- [ ] Optionally permit a CloudFront distribution
-- [ ] Be able to use a custom domain name on CloudFront
+- [ ] Create a CloudFront distribution
+- [ ] Optionally be able to use a custom domain name on CloudFront
 
 Maybe:
 
