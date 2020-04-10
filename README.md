@@ -6,7 +6,13 @@ Run [Datasette](https://github.com/simonw/datasette) on AWS API Gateway + AWS La
 
 ### Creating
 
-Run `./update-stack <stack-name> <sqlite.db> [<sqlite.db> ...]`, e.g. `./update-stack northwinds northwinds.db`
+Clone the repo and run `./update-stack <stack-name> <sqlite.db> [<sqlite.db> ...]`, e.g.:
+
+```bash
+git clone https://github.com/code402/datasette-lambda.git
+cd datasette-lambda
+./update-stack northwinds northwinds.db`
+```
 
 A CloudFormation stack will be created (or updated) with an S3 bucket.
 
