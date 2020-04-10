@@ -1,6 +1,10 @@
 # datasette-lambda
 
-Run [Datasette](https://github.com/simonw/datasette) on AWS API Gateway + AWS Lambda.
+Run [Datasette](https://github.com/simonw/datasette) on AWS as a serverless application:
+
+<div><a href='//sketchviz.com/@cldellow/81af2bc7bec979e5725f0718e752ac47'><img src='https://sketchviz.com/@cldellow/81af2bc7bec979e5725f0718e752ac47/f35313b49e0b0e9be5cd360902948fb293590d9b.sketchy.png' style='max-width: 100%;'></a></div>
+
+Sufficiently small databases (unzipped size up to ~250 MB, zipped size up to ~50 MB) will be inlined in the Lambda deployment package. Others will be published to S3 and fetched on Lambda startup.
 
 ## Getting started
 
@@ -48,6 +52,7 @@ Run `./delete-stack <stack-name>` to tear down the infrastructure.
 - [x] Parity: Support CORS flag
 - [x] Parity: Support metadata flag
 - [x] Parity: Support config options
+- [ ] Use API Gateway's faster/cheaper HTTP APIs instead of REST APIs (requires [erm/mangum #94](https://github.com/erm/mangum/pull/94))
 
 Maybe:
 
