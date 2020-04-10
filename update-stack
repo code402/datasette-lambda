@@ -3,6 +3,12 @@
 set -euo pipefail
 set -x
 
+logfile=$(mktemp)
+finish() {
+  rm -f "${logfile}"
+}
+trap finish EXIT
+
 stack_exists() {
   local stack_name
   stack_name=${1:?must provide stack name}
@@ -24,6 +30,35 @@ s3cp() {
   fi
 }
 
+create_or_update_stack() {
+  local cmd
+  local stack_name
+  local rv
+  stack_name=${1:?must specify stack name}
+  shift
+  cmd="update-stack"
+
+  if ! stack_exists "${stack_name}"; then
+    cmd="create-stack"
+    aws cloudformation create-stack --stack-name="${stack_name}" "$@" 
+    aws cloudformation wait stack-create-complete --stack-name="${stack_name}"
+  else
+    if aws cloudformation update-stack --stack-name="${stack_name}" "$@" |& tee "${logfile}"; then
+      aws cloudformation wait stack-update-complete --stack-name="${stack_name}"
+    else
+      rv=$?
+      # There must be a less janky way to detect this. When the template hasn't changed,
+      # the update-stack command will fail because there are no updates to perform.
+      # That's not what we'd like; so we check the output for this string. It'll
+      # likely fail to detect this case in non-English locales, though.
+      if grep --silent "No updates are to be performed" "${logfile}"; then
+        return 0
+      fi
+      return "${rv}"
+    fi
+  fi
+}
+
 main() {
   stack_name=${1:?must provide CloudFormation stack name}
   db=${2:?must provide SQLite db}
@@ -33,18 +68,7 @@ main() {
     exit 2
   fi
 
-  # If the stack does not exist, create it. Warn that the user has to do a manual step
-  # with DNS.
-  cmd="update-stack"
-  if ! stack_exists "${stack_name}"; then
-    cmd="create-stack"
-  fi
-  wait_cmd=${cmd/-stack/}
-  wait_cmd="stack-${wait_cmd}-complete"
-
-  aws cloudformation "$cmd" --stack-name="${stack_name}" --template-body=file://stack-prereq.yaml
-  aws cloudformation wait "$wait_cmd" --stack-name="${stack_name}"
-
+  create_or_update_stack "${stack_name}" --template-body=file://stack-prereq.yaml
   bucket=$(aws cloudformation describe-stack-resources --stack-name "${stack_name}" --logical-resource-id S3Bucket --query StackResources[0].PhysicalResourceId --output text)
 
   if true; then
@@ -56,15 +80,7 @@ main() {
     s3cp package.zip s3://"$bucket"/package.zip
   fi
 
-  cmd="update-stack"
-  if ! stack_exists "${stack_name}-lambda"; then
-    cmd="create-stack"
-  fi
-  wait_cmd=${cmd/-stack/}
-  wait_cmd="stack-${wait_cmd}-complete"
-
-  aws cloudformation "$cmd" --capabilities CAPABILITY_IAM --stack-name="${stack_name}-lambda" --parameters ParameterKey=Bucket,ParameterValue="${bucket}" --template-body=file://stack-lambda.yaml
-  aws cloudformation wait "$wait_cmd" --stack-name="${stack_name}-lambda"
+  create_or_update_stack "${stack_name}-lambda" --capabilities CAPABILITY_IAM --parameters ParameterKey=Bucket,ParameterValue="${bucket}" --template-body=file://stack-lambda.yaml
 
   s3cp "${db}" s3://"${bucket}"/db.db
 

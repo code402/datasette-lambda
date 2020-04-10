@@ -28,7 +28,7 @@ Run `./delete-stack <stack-name>` to tear down the infrastructure.
 
 - [x] Downloads from S3 should use an atomic fetch/rename to be robust against transient errors
 - [ ] We should embed the DB in the Lambda package itself, when possible, to avoid the coldstart S3 fetch
-- [ ] Repeated calls of update-stack should be robust against template-not-changed errors
+- [x] Repeated calls of update-stack should be robust against template-not-changed errors
 - [x] Fix issue with `base_url` not always being respected in generated URLs (maybe issue in how we use Mangum?)
 - [ ] Be able to host multiple DBs
 - [ ] Use the passed-in name of the DB as the DB name
