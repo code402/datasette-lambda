@@ -73,7 +73,7 @@ create_or_update_stack() {
 create_lambda_zip() {
   rm -f "${lambdazip}"
   pushd app
-  zip -r "${lambdazip}" .
+  zip --quiet -r "${lambdazip}" .
   popd
 }
 
@@ -120,7 +120,7 @@ main() {
     for db in "$@"; do
       dir=$(dirname "${db}")
       pushd "${dir}"
-      zip "${lambdazip}" "$(basename "${db}")"
+      zip --quiet "${lambdazip}" "$(basename "${db}")"
       popd
     done
 
@@ -154,7 +154,10 @@ main() {
   lambda=$(aws cloudformation describe-stack-resources --stack-name "${stack_name}-lambda" --logical-resource-id LambdaFunction --query StackResources[0].PhysicalResourceId --output text)
   aws lambda update-function-code --function-name "$lambda" --s3-bucket "${bucket}" --s3-key package.zip
 
-  aws cloudformation describe-stacks --stack-name "${stack_name}"-lambda --query Stacks[0].Outputs[0].OutputValue --output text
+  distribution_id=$(aws cloudformation describe-stack-resources --stack-name "${stack_name}-lambda" --logical-resource-id CloudFrontDistribution --query StackResources[0].PhysicalResourceId --output text)
+  aws cloudfront create-invalidation --distribution-id "${distribution_id}" --paths '/*'
+
+  aws cloudformation describe-stacks --stack-name "${stack_name}"-lambda --query Stacks[0].Outputs
 }
 
 main "$@"

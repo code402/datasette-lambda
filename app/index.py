@@ -51,7 +51,9 @@ ds = Datasette(
     plugins_dir=None, #plugins_dir,
     static_mounts=None, #static,
     config={
-        'base_url': '/datasette/'
+        # NB: base_url is only needed if we permit users to specify a custom
+        #     prefix for their distribution
+#        'base_url': '/datasette/'
     }, #dict(config),
     memory=False, #memory,
     version_note=None #version_note,
@@ -60,6 +62,10 @@ app = ds.app()
 handler_ = Mangum(app)
 
 def handler(event, context):
+    # NB: This code is currently commented out because we're fronting the API Gateway
+    #     with a CloudFront distribution. We'll need this code again if we permit
+    #     users to specify a custom prefix for the distribution.
+    #
     # path doesn't include the stage component, but Datasette requires it in order to
     # correctly construct URLs in some cases.
     #
@@ -69,6 +75,6 @@ def handler(event, context):
     # See https://github.com/simonw/datasette/issues/394#issuecomment-603501719 for where
     # simonw identifies that the full path must be present.
 
-    event['path'] = '/' + event['requestContext']['stage'] + event['path']
+    #event['path'] = '/' + event['requestContext']['stage'] + event['path']
     return handler_(event, context)
 

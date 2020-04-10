@@ -32,7 +32,7 @@ Run `./delete-stack <stack-name>` to tear down the infrastructure.
 - [x] Fix issue with `base_url` not always being respected in generated URLs (maybe issue in how we use Mangum?)
 - [x] Be able to host multiple DBs
 - [x] Use the passed-in name of the DB as the DB name
-- [ ] Create a CloudFront distribution
+- [x] Create a CloudFront distribution
 - [ ] Optionally be able to use a custom domain name on CloudFront
 - [ ] Parity: Support CORS flag
 - [ ] Parity: Support metadata flag
@@ -40,5 +40,5 @@ Run `./delete-stack <stack-name>` to tear down the infrastructure.
 
 Maybe:
 
-- [ ] Be able to customize the stage name
+- [ ] Be able to customize the "mount" point of the CloudFront distribution
 - [ ] Add support into core datasette's `publish` command, fixing [#236](https://github.com/simonw/datasette/issues/236)

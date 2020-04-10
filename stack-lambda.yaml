@@ -145,9 +145,47 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:*
 
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Origins:
+          - DomainName: !Sub ${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com
+            Id: datasette
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+            OriginPath: /datasette
+        Enabled: true
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          Compress: true
+          TargetOriginId: datasette
+          ForwardedValues:
+            QueryString: true
+            Headers:
+              - Referer
+              - CloudFront-Viewer-Country
+              - CloudFront-Is-Desktop-Viewer
+              - CloudFront-Is-Mobile-Viewer
+              - CloudFront-Is-SmartTV-Viewer
+              - CloudFront-Is-Tablet-Viewer
+              - User-Agent
+            Cookies:
+              Forward: none
+          ViewerProtocolPolicy: allow-all
+        PriceClass: PriceClass_100
+
 Outputs:
   ApiUrl:
     Value: !Sub
       - https://${ApiId}.execute-api.${AWS::Region}.amazonaws.com/${StageName}
       - ApiId: !Ref ApiGateway
         StageName: !Ref ApiStage
+
+  CloudFrontUrl:
+    Value: !Sub
+      - https://${DomainName}
+      - DomainName: !GetAtt CloudFrontDistribution.DomainName
