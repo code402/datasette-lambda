@@ -8,16 +8,39 @@ from mangum import Mangum
 from datasette.app import Datasette, DEFAULT_CONFIG, CONFIG_OPTIONS, pm
 
 S3_BUCKET = os.environ['Bucket']
-DB_FILE = '/tmp/db.db'
-DB_FILE_TMP = '/tmp/db.db.tmp'
+DB_FILES = os.environ['DbFiles'].split('@')
 
-if not os.path.exists(DB_FILE):
-    s3 = boto3.client('s3')
-    s3.download_file(S3_BUCKET, 'db.db', DB_FILE_TMP)
-    os.rename(DB_FILE_TMP, DB_FILE)
+files = []
+
+# The SQLite files are either embedded in the deployment package,
+# or available in the S3 bucket.
+#
+# If they're embedded in the deployment package, they're located
+# at /var/task
+
+for file in DB_FILES:
+    abs_path = '/var/task/' + file
+    if os.path.exists(abs_path):
+        files.append(abs_path)
+
+if files and len(files) != len(DB_FILES):
+    # This should never happen.
+    raise Exception('some, but not all, dbs were in the deployment package: expected ' + str(DB_FILES) + '; got ' + str(files))
+
+if not files:
+    for file in DB_FILES:
+        db_file = '/tmp/' + file
+        db_file_tmp = db_file + '.tmp'
+
+        if not os.path.exists(db_file):
+            s3 = boto3.client('s3')
+            s3.download_file(S3_BUCKET, file, db_file_tmp)
+            os.rename(db_file_tmp, db_file)
+
+        files.append(file)
 
 ds = Datasette(
-    [DB_FILE], #files,
+    files,
     immutables=[],
     cache_headers=True,
     cors=True,

@@ -4,6 +4,20 @@ set -euo pipefail
 set -x
 
 logfile=$(mktemp)
+lambdazip=$(readlink -m package.zip)
+
+# Per https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html,
+# the total unzipped size of the deployment package, including layers, must be
+# less than 250 MB. Datasette and its deps are about 30 MB, so that leaves 220 MB
+# for embedded SQLite DBs.
+deployment_size_limit=220000000
+
+# Per the same doc, the zip file we upload needs to be less than 50 MB.
+zip_size_limit=50000000
+
+# Per the same doc, /tmp has a 512 MB limit.
+tmp_size_limit=512000000
+
 finish() {
   rm -f "${logfile}"
 }
@@ -31,15 +45,12 @@ s3cp() {
 }
 
 create_or_update_stack() {
-  local cmd
   local stack_name
   local rv
   stack_name=${1:?must specify stack name}
   shift
-  cmd="update-stack"
 
   if ! stack_exists "${stack_name}"; then
-    cmd="create-stack"
     aws cloudformation create-stack --stack-name="${stack_name}" "$@" 
     aws cloudformation wait stack-create-complete --stack-name="${stack_name}"
   else
@@ -59,30 +70,86 @@ create_or_update_stack() {
   fi
 }
 
+create_lambda_zip() {
+  rm -f "${lambdazip}"
+  pushd app
+  zip -r "${lambdazip}" .
+  popd
+}
+
 main() {
   stack_name=${1:?must provide CloudFormation stack name}
-  db=${2:?must provide SQLite db}
+  shift
 
-  if [ ! -e "${db}" ]; then
-    echo "error: cannot find database ${db}" > /dev/stderr
-    exit 2
+  EXTERNAL=${EXTERNAL:-0}
+  db_size=0
+  dbfiles=
+
+  if [ "$#" -eq 0 ]; then
+    echo "error: must specify at least one database" > /dev/stderr
+    exit 1
+  fi
+
+  # All the database files passed must exist.
+  for db in "$@"; do
+    if [ ! -e "${db}" ]; then
+      echo "error: cannot find database ${db}" > /dev/stderr
+      exit 2
+    fi
+    # The aws-cli CloudFormation support is weird. If you pass commas,
+    # it tries to interpret it as a List<String> and fails.
+    # Lazy workaround is to separate using a non-comma.
+    dbfiles="${dbfiles}${dbfiles:+@}$(basename "${db}")"
+    size=$(stat --printf="%s" "${db}")
+    db_size=$((db_size + size))
+  done
+
+  if [ "${db_size}" -gt "${tmp_size_limit}" ]; then
+    echo "error: Lambda has a 512 MB limit, but total size of DBs is ${db_size}; cannot proceed" > /dev/stderr
+    exit 1
+  fi
+
+  if [ "${EXTERNAL}" == "0" ] && [ "${db_size}" -gt "${deployment_size_limit}" ]; then
+    echo "info: EXTERNAL=0 but total size of DBs is ${db_size}; falling back to EXTERNAL=1" > /dev/stderr
+    EXTERNAL=1
+  fi
+
+  create_lambda_zip
+
+  if [ "${EXTERNAL}" == "0" ]; then
+    for db in "$@"; do
+      dir=$(dirname "${db}")
+      pushd "${dir}"
+      zip "${lambdazip}" "$(basename "${db}")"
+      popd
+    done
+
+    size=$(stat --printf="%s" "${lambdazip}")
+    if [ "${size}" -gt "${zip_size_limit}" ]; then
+      echo "info: EXTERNAL=0 but total size of zip is ${size}; falling back to EXTERNAL=1" > /dev/stderr
+      EXTERNAL=1
+
+      create_lambda_zip
+    fi
   fi
 
   create_or_update_stack "${stack_name}" --template-body=file://stack-prereq.yaml
   bucket=$(aws cloudformation describe-stack-resources --stack-name "${stack_name}" --logical-resource-id S3Bucket --query StackResources[0].PhysicalResourceId --output text)
 
-  if true; then
-    rm -f package.zip
-    pushd app
-    zip -r ../package.zip .
-    popd
+  s3cp "${lambdazip}" s3://"$bucket"/package.zip
 
-    s3cp package.zip s3://"$bucket"/package.zip
+  create_or_update_stack "${stack_name}-lambda" \
+    --capabilities CAPABILITY_IAM \
+    --parameters \
+      ParameterKey=Bucket,ParameterValue="${bucket}" \
+      ParameterKey=DbFiles,ParameterValue="${dbfiles}" \
+    --template-body=file://stack-lambda.yaml
+
+  if [ "${EXTERNAL}" == "1" ]; then
+    for db in "$@"; do
+      s3cp "${db}" s3://"${bucket}"/"$(basename "${db}")"
+    done
   fi
-
-  create_or_update_stack "${stack_name}-lambda" --capabilities CAPABILITY_IAM --parameters ParameterKey=Bucket,ParameterValue="${bucket}" --template-body=file://stack-lambda.yaml
-
-  s3cp "${db}" s3://"${bucket}"/db.db
 
   lambda=$(aws cloudformation describe-stack-resources --stack-name "${stack_name}-lambda" --logical-resource-id LambdaFunction --query StackResources[0].PhysicalResourceId --output text)
   aws lambda update-function-code --function-name "$lambda" --s3-bucket "${bucket}" --s3-key package.zip

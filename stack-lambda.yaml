@@ -4,6 +4,8 @@ Description: Web service to host a Datasette instance on AWS.
 Parameters:
   Bucket:
     Type: String
+  DbFiles:
+    Type: String
 
 Resources:
   LambdaFunction:
@@ -24,6 +26,7 @@ Resources:
       Environment:
         Variables:
           Bucket: !Sub ${Bucket}
+          DbFiles: !Sub ${DbFiles}
 
   LambdaIAMRole:
     Type: AWS::IAM::Role

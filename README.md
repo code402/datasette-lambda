@@ -27,11 +27,11 @@ Run `./delete-stack <stack-name>` to tear down the infrastructure.
 ## Known issues / future work
 
 - [x] Downloads from S3 should use an atomic fetch/rename to be robust against transient errors
-- [ ] We should embed the DB in the Lambda package itself, when possible, to avoid the coldstart S3 fetch
+- [x] We should embed the DB in the Lambda package itself, when possible, to avoid the coldstart S3 fetch
 - [x] Repeated calls of update-stack should be robust against template-not-changed errors
 - [x] Fix issue with `base_url` not always being respected in generated URLs (maybe issue in how we use Mangum?)
-- [ ] Be able to host multiple DBs
-- [ ] Use the passed-in name of the DB as the DB name
+- [x] Be able to host multiple DBs
+- [x] Use the passed-in name of the DB as the DB name
 - [ ] Create a CloudFront distribution
 - [ ] Optionally be able to use a custom domain name on CloudFront
 
