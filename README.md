@@ -34,6 +34,9 @@ Run `./delete-stack <stack-name>` to tear down the infrastructure.
 - [x] Use the passed-in name of the DB as the DB name
 - [ ] Create a CloudFront distribution
 - [ ] Optionally be able to use a custom domain name on CloudFront
+- [ ] Parity: Support CORS flag
+- [ ] Parity: Support metadata flag
+- [ ] Parity: Support config options
 
 Maybe:
 
