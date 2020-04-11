@@ -199,6 +199,7 @@ Resources:
 
   SSLCertificate:
     Type: AWS::CertificateManager::Certificate
+    Condition: CreateCNAME
     Properties:
       DomainName: !Sub ${Domain}
       ValidationMethod: EMAIL
