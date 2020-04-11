@@ -3,12 +3,16 @@
 set -euo pipefail
 set -x
 
+EXTERNAL=${EXTERNAL:-0}
 logfile=$(mktemp)
+yamlfile=$(mktemp)
 lambdazip=$(readlink -m package.zip)
 db_paths=()
 dbfiles=
 cors=False
-EXTERNAL=${EXTERNAL:-0}
+zone_id=none
+domain=none
+
 
 # Per https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html,
 # the total unzipped size of the deployment package, including layers, must be
@@ -23,7 +27,7 @@ zip_size_limit=50000000
 tmp_size_limit=512000000
 
 finish() {
-  rm -f "${logfile}"
+  rm -f "${logfile}" "${yamlfile}"
 }
 trap finish EXIT
 
@@ -45,6 +49,30 @@ s3cp() {
     s3patch -v cp "${from}" "${to}"
   else
     aws s3 cp "${from}" "${to}"
+  fi
+}
+
+get_hosted_zone() {
+  local domain id zone_domain output
+  domain=${1:?must provide domain, e.g. datasette-demo.code402.com}
+
+  # Try to find a Route 53 hosted zone that contains the given domain.
+  # Our approach is naive: look for a zone matching the domain. If none found,
+  # and the domain has a period, lop off the left-most subdomain and try again.
+  output=$(aws route53 list-hosted-zones-by-name --dns-name "${domain}" --max-items 1 --query "HostedZones[0].[Id, Name]" --output text)
+  IFS=$'\t' read -r id zone_domain < <(echo "$output")
+
+  if [ "${zone_domain}" == "${domain}." ]; then
+    echo "${id#/hostedzone/}"
+    return 0
+  else
+    # Recurse, if there's any zone left
+    IFS=. read -r _ domain < <(echo "${domain}")
+    if [ "${domain}" != "" ]; then
+      get_hosted_zone "${domain}"
+    else
+      return 1
+    fi
   fi
 }
 
@@ -82,7 +110,7 @@ create_lambda_zip() {
 }
 
 parse_opts() {
-  local db_size=0 size file
+  local db_size=0 size file rv
 
   rm -f app/metadata.json
   rm -f app/config.txt
@@ -97,6 +125,20 @@ parse_opts() {
 
       --cors)
         cors=True
+        ;;
+
+      --domain)
+        shift
+        domain=${1:?error: --domain requires domain argument}
+
+        set +e
+        zone_id=$(get_hosted_zone "${domain}")
+        rv=$?
+        set -e
+        if [ "${rv}" != 0 ]; then
+          echo "error: could not find hosted zone for ${domain}" > /dev/stderr
+          exit 1
+        fi
         ;;
 
       -m|--metadata)
@@ -146,6 +188,18 @@ parse_opts() {
   fi
 }
 
+preprocess_yaml() {
+  if [ "${domain}" == "none" ]; then
+    <stack-lambda.yaml awk '
+/^#if cname/ { in_cname = 1; next; }
+in_cname != 1 { print }
+/^#endif/ { in_cname = 0; next; }
+    ' > "${yamlfile}"
+  else
+    cp stack-lambda.yaml "${yamlfile}"
+  fi
+}
+
 main() {
   stack_name=${1:?must provide CloudFormation stack name}
   shift
@@ -176,13 +230,17 @@ main() {
 
   s3cp "${lambdazip}" s3://"$bucket"/package.zip
 
+  preprocess_yaml
+
   create_or_update_stack "${stack_name}-lambda" \
     --capabilities CAPABILITY_IAM \
     --parameters \
       ParameterKey=Bucket,ParameterValue="${bucket}" \
       ParameterKey=CORS,ParameterValue="${cors}" \
       ParameterKey=DbFiles,ParameterValue="${dbfiles}" \
-    --template-body=file://stack-lambda.yaml
+      ParameterKey=Domain,ParameterValue="${domain}" \
+      ParameterKey=HostedZoneId,ParameterValue="${zone_id}" \
+    --template-body=file://"${yamlfile}"
 
   if [ "${EXTERNAL}" == "1" ]; then
     for db in "${db_paths[@]}"; do

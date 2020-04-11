@@ -9,6 +9,13 @@ Parameters:
   CORS:
     Type: String
     AllowedPattern: ^True$|^False$
+  HostedZoneId:
+    Type: String
+  Domain:
+    Type: String
+
+Conditions:
+  CreateCNAME: !Not [!Equals [ !Ref HostedZoneId, none ]]
 
 Resources:
   LambdaFunction:
@@ -153,6 +160,14 @@ Resources:
     Type: AWS::CloudFront::Distribution
     Properties:
       DistributionConfig:
+#if cname (this section is included/excluded by a preprocessor)
+        Aliases:
+          - !Sub ${Domain}
+        ViewerCertificate:
+          AcmCertificateArn: !Ref SSLCertificate
+          MinimumProtocolVersion: TLSv1
+          SslSupportMethod: sni-only
+#endif
         Origins:
           - DomainName: !Sub ${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com
             Id: datasette
@@ -179,8 +194,26 @@ Resources:
               - User-Agent
             Cookies:
               Forward: none
-          ViewerProtocolPolicy: allow-all
+          ViewerProtocolPolicy: redirect-to-https
         PriceClass: PriceClass_100
+
+  SSLCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Sub ${Domain}
+      ValidationMethod: EMAIL
+
+  CNAMERecord:
+    Type: AWS::Route53::RecordSet
+    Condition: CreateCNAME
+    Properties:
+      HostedZoneId: !Sub ${HostedZoneId}
+      Name: !Sub ${Domain}
+      ResourceRecords:
+        - !GetAtt CloudFrontDistribution.DomainName
+      TTL: '60'
+      Type: CNAME
+
 
 Outputs:
   ApiUrl:

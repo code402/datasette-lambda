@@ -2,11 +2,11 @@
 
 Run [Datasette](https://github.com/simonw/datasette) on AWS as a serverless application:
 
-<div><a href='//sketchviz.com/@cldellow/81af2bc7bec979e5725f0718e752ac47'><img src='https://sketchviz.com/@cldellow/81af2bc7bec979e5725f0718e752ac47/f35313b49e0b0e9be5cd360902948fb293590d9b.sketchy.png' style='max-width: 100%;'></a></div>
+<div><a href='//sketchviz.com/@cldellow/81af2bc7bec979e5725f0718e752ac47'><img src='https://sketchviz.com/@cldellow/81af2bc7bec979e5725f0718e752ac47/c8d9beceb2a727d2299c682c7ba8c276f702b8dd.sketchy.png' style='max-width: 100%;'></a></div>
 
 Sufficiently small databases (unzipped size up to ~250 MB, zipped size up to ~50 MB) will be inlined in the Lambda deployment package. Others will be published to S3 and fetched on Lambda startup.
 
-You can see a demo using Datasette's fixtures db here: https://d2al83gq7ofbo9.cloudfront.net/
+You can see a demo using Datasette's fixtures db here: https://datasette-demo.code402.com/
 
 ## Getting started
 
@@ -21,9 +21,17 @@ cd datasette-lambda
 ```
 
 Some Datasette flags are supported:
+
 - `--config key:value`, to set [config options](https://datasette.readthedocs.io/en/stable/config.html)
 - `--cors`, to enable `Access-Control-Allow-Origin: *` headers on responses
 - `--metadata <metadata.json>`, to provide [metadata](https://datasette.readthedocs.io/en/stable/metadata.html)
+
+And some non-Datasette flags are supported:
+
+- `--domain example.com` or `--domain subdomain.example.com`, if `example.com` is a hosted zone in Route 53
+  - register a `CNAME` record that points to the CloudFront distribution
+  - register an SSL certificate for the domain (you'll have to ack a confirmation email from Amazon)
+  - associate that certificate to the CloudFront distribution
 
 A CloudFormation stack will be created (or updated) with an S3 bucket.
 
@@ -50,7 +58,7 @@ Run `./delete-stack <stack-name>` to tear down the infrastructure.
 - [x] Be able to host multiple DBs
 - [x] Use the passed-in name of the DB as the DB name
 - [x] Create a CloudFront distribution
-- [ ] Optionally be able to use a custom domain name on CloudFront
+- [x] Optionally be able to use a custom domain name on CloudFront
 - [x] Parity: Support CORS flag
 - [x] Parity: Support metadata flag
 - [x] Parity: Support config options
