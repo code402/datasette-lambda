@@ -32,6 +32,7 @@ And some non-Datasette flags are supported:
   - register a `CNAME` record that points to the CloudFront distribution
   - register an SSL certificate for the domain (you'll have to ack a confirmation email from Amazon)
   - associate that certificate to the CloudFront distribution
+- `--prefix some/path`, to mount the Datasette app at a path other than the root
 
 A CloudFormation stack will be created (or updated) with an S3 bucket.
 
@@ -66,5 +67,5 @@ Run `./delete-stack <stack-name>` to tear down the infrastructure.
 
 Maybe:
 
-- [ ] Be able to customize the "mount" point of the CloudFront distribution
+- [x] Be able to customize the "mount" point of the CloudFront distribution
 - [ ] Add support into core datasette's `publish` command, fixing [#236](https://github.com/simonw/datasette/issues/236)

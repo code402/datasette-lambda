@@ -12,6 +12,7 @@ CORS = os.environ['CORS'] == 'True'
 DB_FILES = os.environ['DbFiles'].split('@')
 METADATA_PATH = '/var/task/metadata.json'
 CONFIG_PATH = '/var/task/config.txt'
+PREFIX = os.environ['Prefix']
 
 def ensure_files():
     """Retrieve the SQLite DB files from S3, if needed.
@@ -87,6 +88,9 @@ def load_config():
 
             config[key] = value
 
+
+    if PREFIX:
+        config['base_url'] = '/{}/'.format(PREFIX)
     return config
 
 def create_handler():
@@ -114,18 +118,27 @@ handler_ = create_handler()
 def handler(event, context):
     """Thunk to handle extra stagename from API Gateway."""
 
-    # NB: This code is currently commented out because we're fronting the API Gateway
-    #     with a CloudFront distribution. We'll need this code again if we permit
-    #     users to specify a custom prefix for the distribution.
+    # Path handling is a little curious.
     #
-    # path doesn't include the stage component, but Datasette requires it in order to
-    # correctly construct URLs in some cases.
+    # (1) user sends request in CloudFront to /some/path
+    # (2) CloudFront forwards to API Gateway with a prefix, resulting API Gateway
+    #     seeing /datasette/some/path
+    # (3) API Gateway forwards to Lambda with stageName = datasette and path = /some/path
     #
-    # See https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html#api-gateway-simple-proxy-for-lambda-input-format for description of the format
-    # of this object.
+    # In the case where there is no base_url, things just work.
     #
-    # See https://github.com/simonw/datasette/issues/394#issuecomment-603501719 for where
-    # simonw identifies that the full path must be present.
+    # In the other case, we need to do a little work.
+    # This is because API Gateway is the default cache behavior, so it sees all requests,
+    # including ones that don't have the base url.
+    ok = not PREFIX or event['path'].startswith('/{}/'.format(PREFIX))
 
-    #event['path'] = '/' + event['requestContext']['stage'] + event['path']
-    return handler_(event, context)
+    if ok:
+        return handler_(event, context)
+
+    return {
+        "isBase64Encoded": False,
+        "statusCode": 404,
+        "headers": {},
+        "multiValueHeaders": {},
+        "body": "Not found"
+    }

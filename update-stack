@@ -5,13 +5,13 @@ set -x
 
 EXTERNAL=${EXTERNAL:-0}
 logfile=$(mktemp)
-yamlfile=$(mktemp)
 lambdazip=$(readlink -m package.zip)
 db_paths=()
 dbfiles=
 cors=False
-zone_id=none
-domain=none
+zone_id=
+domain=
+prefix=
 
 
 # Per https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html,
@@ -27,7 +27,7 @@ zip_size_limit=50000000
 tmp_size_limit=512000000
 
 finish() {
-  rm -f "${logfile}" "${yamlfile}"
+  rm -f "${logfile}"
 }
 trap finish EXIT
 
@@ -151,6 +151,14 @@ parse_opts() {
 
         cp "${file}" app/metadata.json
         ;;
+      --prefix)
+        shift
+        prefix=${1:?error: --prefix requires prefix argument}
+        # Trim leading/trailing slashes to be robust against how the user enters
+        # the value.
+        prefix=${prefix#/}
+        prefix=${prefix%/}
+        ;;
       *)
         db_paths+=("$1")
         ;;
@@ -188,18 +196,6 @@ parse_opts() {
   fi
 }
 
-preprocess_yaml() {
-  if [ "${domain}" == "none" ]; then
-    <stack-lambda.yaml awk '
-/^#if cname/ { in_cname = 1; next; }
-in_cname != 1 { print }
-/^#endif/ { in_cname = 0; next; }
-    ' > "${yamlfile}"
-  else
-    cp stack-lambda.yaml "${yamlfile}"
-  fi
-}
-
 main() {
   stack_name=${1:?must provide CloudFormation stack name}
   shift
@@ -230,8 +226,6 @@ main() {
 
   s3cp "${lambdazip}" s3://"$bucket"/package.zip
 
-  preprocess_yaml
-
   create_or_update_stack "${stack_name}-lambda" \
     --capabilities CAPABILITY_IAM \
     --parameters \
@@ -240,7 +234,8 @@ main() {
       ParameterKey=DbFiles,ParameterValue="${dbfiles}" \
       ParameterKey=Domain,ParameterValue="${domain}" \
       ParameterKey=HostedZoneId,ParameterValue="${zone_id}" \
-    --template-body=file://"${yamlfile}"
+      ParameterKey=Prefix,ParameterValue="${prefix}" \
+    --template-body=file://stack-lambda.yaml
 
   if [ "${EXTERNAL}" == "1" ]; then
     for db in "${db_paths[@]}"; do

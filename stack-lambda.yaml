@@ -4,25 +4,33 @@ Description: Web service to host a Datasette instance on AWS.
 Parameters:
   Bucket:
     Type: String
-  DbFiles:
-    Type: String
   CORS:
     Type: String
+    Description: Whether to start the Datasette service with the --cors flag.
     AllowedPattern: ^True$|^False$
-  HostedZoneId:
+  DbFiles:
     Type: String
+    Description: The names of the DB files to serve, separated by @ symbols.
   Domain:
     Type: String
+    Default: ''
+  HostedZoneId:
+    Type: String
+    Default: ''
+  Prefix:
+    Type: String
+    Default: ''
+    Description: The path on which the Datasette service is hosted.
 
 Conditions:
-  CreateCNAME: !Not [!Equals [ !Ref HostedZoneId, none ]]
+  CreateCNAME: !Not [!Equals [ !Ref HostedZoneId, '' ]]
 
 Resources:
   LambdaFunction:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        S3Bucket: !Sub ${Bucket}
+        S3Bucket: !Ref Bucket
         S3Key: package.zip
       Runtime: python3.8
       Description: !Sub ${AWS::StackName} Datasette
@@ -35,9 +43,10 @@ Resources:
         - arn:aws:lambda:us-east-1:562933535245:layer:datasette-0_39:8
       Environment:
         Variables:
-          Bucket: !Sub ${Bucket}
-          CORS: !Sub ${CORS}
-          DbFiles: !Sub ${DbFiles}
+          Bucket: !Ref Bucket
+          CORS: !Ref CORS
+          DbFiles: !Ref DbFiles
+          Prefix: !Ref Prefix
 
   LambdaIAMRole:
     Type: AWS::IAM::Role
@@ -160,14 +169,15 @@ Resources:
     Type: AWS::CloudFront::Distribution
     Properties:
       DistributionConfig:
-#if cname (this section is included/excluded by a preprocessor)
-        Aliases:
-          - !Sub ${Domain}
+        Aliases: !If [ CreateCNAME, [ !Ref Domain ], !Ref "AWS::NoValue" ]
         ViewerCertificate:
-          AcmCertificateArn: !Ref SSLCertificate
-          MinimumProtocolVersion: TLSv1
-          SslSupportMethod: sni-only
-#endif
+          !If
+            - CreateCNAME
+            -
+              AcmCertificateArn: !Ref SSLCertificate
+              MinimumProtocolVersion: TLSv1
+              SslSupportMethod: sni-only
+            - !Ref "AWS::NoValue"
         Origins:
           - DomainName: !Sub ${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com
             Id: datasette
