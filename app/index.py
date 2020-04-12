@@ -117,6 +117,15 @@ handler_ = create_handler()
 
 def handler(event, context):
     """Thunk to handle extra stagename from API Gateway."""
+    # Hostname handling - the request in the event has the API Gateway's
+    # hostname, e.g. b3v6ro7cdrd.execute-api.us-east-1.amazonaws.com.
+    # Thus, when Datasette constructs an absolute URL, it'll construct a URL
+    # that points to the API Gateway. We'd prefer it to point to the
+    # domain used by CloudFront, which is available in
+    # event['headers']['X-Forwarded-Host']
+    event['headers']['Host'] = event['headers']['X-Forwarded-Host']
+    event['domainName'] = event['headers']['X-Forwarded-Host']
+    event['multiValueHeaders']['Host'] = [event['headers']['X-Forwarded-Host']]
 
     # Path handling is a little curious.
     #
@@ -129,7 +138,8 @@ def handler(event, context):
     #
     # In the other case, we need to do a little work.
     # This is because API Gateway is the default cache behavior, so it sees all requests,
-    # including ones that don't have the base url.
+    # including ones that don't have the base url. So, if the prefix is set,
+    # and the request is not to that prefix, 404 it.
     ok = not PREFIX or event['path'].startswith('/{}/'.format(PREFIX))
 
     if ok:

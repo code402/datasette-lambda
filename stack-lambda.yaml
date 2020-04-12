@@ -66,6 +66,7 @@ Resources:
             Principal:
               Service:
                 - lambda.amazonaws.com
+                - edgelambda.amazonaws.com
       Policies:
         - PolicyDocument:
             Version: 2012-10-17
@@ -207,11 +208,48 @@ Resources:
               - CloudFront-Is-Mobile-Viewer
               - CloudFront-Is-SmartTV-Viewer
               - CloudFront-Is-Tablet-Viewer
+              - X-Forwarded-Host
               - User-Agent
             Cookies:
               Forward: none
           ViewerProtocolPolicy: redirect-to-https
+          LambdaFunctionAssociations:
+            - EventType: viewer-request
+              LambdaFunctionARN: !Ref CFAddHostLambdaFunctionVersion
         PriceClass: PriceClass_100
+
+  # Add X-Forwarded-Host header
+  # See https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/lambda-event-structure.html#example-viewer-request
+  # for description of input record structure.
+  CFAddHostLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        ZipFile: |
+          exports.handler = (event, context, callback) => {
+            const request = event.Records[0].cf.request;
+            const { headers } = request;
+
+            const hostname = headers.host[0].value;
+            headers['x-forwarded-host'] = [{
+              key:'X-Forwarded-Host',
+              value: hostname
+            }];
+
+            callback(null, request);
+          };
+      Runtime: nodejs10.x
+      Description: !Sub ${AWS::StackName} CloudFront X-Forwarded-Host
+      FunctionName: !Sub ${AWS::StackName}-cf-x-forwarded-host-${AWS::AccountId}
+      Handler: index.handler
+      MemorySize: 128
+      Role: !GetAtt LambdaIAMRole.Arn
+      Timeout: 5
+
+  CFAddHostLambdaFunctionVersion:
+    Type: AWS::Lambda::Version
+    Properties:
+      FunctionName: !Ref CFAddHostLambdaFunction
 
   SSLCertificate:
     Type: AWS::CertificateManager::Certificate

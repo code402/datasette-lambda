@@ -2,7 +2,7 @@
 
 Run [Datasette](https://github.com/simonw/datasette) on AWS as a serverless application:
 
-<div><a href='//sketchviz.com/@cldellow/81af2bc7bec979e5725f0718e752ac47'><img src='https://sketchviz.com/@cldellow/81af2bc7bec979e5725f0718e752ac47/495a2d6933c9d1099afe5136d69a0241342f5639.sketchy.png' style='max-width: 100%;'></a></div>
+<div><a href='//sketchviz.com/@cldellow/81af2bc7bec979e5725f0718e752ac47'><img src='https://sketchviz.com/@cldellow/81af2bc7bec979e5725f0718e752ac47/af75be24956b01795863c58650c7310affe28c61.sketchy.png' style='max-width: 100%;'></a></div>
 
 Sufficiently small databases (unzipped size up to ~250 MB, zipped size up to ~50 MB) will be inlined in the Lambda deployment package. Others will be published to S3 and fetched on Lambda startup.
 
@@ -50,6 +50,8 @@ instance to the web.
 
 Run `./delete-stack <stack-name>` to tear down the infrastructure.
 
+_Note: AWS has a rough edge with deleting Lambda@Edge functions. You will need to run `delete-stack`, then wait a period of time, and run it again for the entire stack to be successfully removed. Ref: [AWS docs](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/lambda-edge-delete-replicas.html)_
+
 ## Known issues / future work
 
 - [x] Downloads from S3 should use an atomic fetch/rename to be robust against transient errors
@@ -63,8 +65,7 @@ Run `./delete-stack <stack-name>` to tear down the infrastructure.
 - [x] Parity: Support CORS flag
 - [x] Parity: Support metadata flag
 - [x] Parity: Support config options
-- [ ] Fix wrong absolute URLs for facets/next page (ds.absolute_url)
-  - https://github.com/simonw/datasette/blob/d349d57cdf3d577afb62bdf784af342a4d5be660/datasette/app.py#L424-L428
+- [x] Fix wrong absolute URLs for facets/next page (ds.absolute_url)
 - [ ] Use API Gateway's faster/cheaper HTTP APIs instead of REST APIs (requires [erm/mangum #94](https://github.com/erm/mangum/pull/94))
 
 Maybe:
