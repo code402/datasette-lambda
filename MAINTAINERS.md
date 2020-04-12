@@ -15,5 +15,5 @@ This could be made more maintainer-friendly. It currently requires that you:
 ## Update the demo
 
 ```bash
-./update-stack datasette-lambda-demo fixtures.db --metadata metadata.json.example --cors --domain datasette-demo.code402.com
+AWS_PROFILE=code402 ./update-stack datasette-lambda-demo fixtures.db --metadata metadata.json.example --cors --domain datasette-demo.code402.com
 ```
