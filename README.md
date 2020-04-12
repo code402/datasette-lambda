@@ -63,6 +63,8 @@ Run `./delete-stack <stack-name>` to tear down the infrastructure.
 - [x] Parity: Support CORS flag
 - [x] Parity: Support metadata flag
 - [x] Parity: Support config options
+- [ ] Fix wrong absolute URLs for facets/next page (ds.absolute_url)
+  - https://github.com/simonw/datasette/blob/d349d57cdf3d577afb62bdf784af342a4d5be660/datasette/app.py#L424-L428
 - [ ] Use API Gateway's faster/cheaper HTTP APIs instead of REST APIs (requires [erm/mangum #94](https://github.com/erm/mangum/pull/94))
 
 Maybe:
