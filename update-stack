@@ -11,6 +11,7 @@ dbfiles=
 cors=False
 zone_id=
 domain=
+validation_domain=
 prefix=
 
 
@@ -63,7 +64,7 @@ get_hosted_zone() {
   IFS=$'\t' read -r id zone_domain < <(echo "$output")
 
   if [ "${zone_domain}" == "${domain}." ]; then
-    echo "${id#/hostedzone/}"
+    echo "${id#/hostedzone/} ${zone_domain%.}"
     return 0
   else
     # Recurse, if there's any zone left
@@ -110,7 +111,7 @@ create_lambda_zip() {
 }
 
 parse_opts() {
-  local db_size=0 size file rv
+  local db_size=0 size file rv get_hosted_zone_output
 
   rm -f app/metadata.json
   rm -f app/config.txt
@@ -132,13 +133,15 @@ parse_opts() {
         domain=${1:?error: --domain requires domain argument}
 
         set +e
-        zone_id=$(get_hosted_zone "${domain}")
+        get_hosted_zone_output=$(get_hosted_zone "${domain}")
         rv=$?
         set -e
         if [ "${rv}" != 0 ]; then
           echo "error: could not find hosted zone for ${domain}" > /dev/stderr
           exit 1
         fi
+
+        read -r zone_id validation_domain < <(echo "${get_hosted_zone_output}")
         ;;
 
       -m|--metadata)
@@ -235,6 +238,7 @@ main() {
       ParameterKey=Domain,ParameterValue="${domain}" \
       ParameterKey=HostedZoneId,ParameterValue="${zone_id}" \
       ParameterKey=Prefix,ParameterValue="${prefix}" \
+      ParameterKey=ValidationDomain,ParameterValue="${validation_domain}" \
     --template-body=file://stack-lambda.yaml
 
   if [ "${EXTERNAL}" == "1" ]; then

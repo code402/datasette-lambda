@@ -14,13 +14,19 @@ Parameters:
   Domain:
     Type: String
     Default: ''
+    Description: The custom CNAME for the CloudFront distribution, e.g. foo.example.com.
   HostedZoneId:
     Type: String
     Default: ''
+    Description: The Route 53 Zone ID for apex domain containing the CNAME, e.g. Z39FM...
   Prefix:
     Type: String
     Default: ''
     Description: The path on which the Datasette service is hosted.
+  ValidationDomain:
+    Type: String
+    Default: ''
+    Description: The apex domain containing the CNAME, e.g. example.com.
 
 Conditions:
   CreateCNAME: !Not [!Equals [ !Ref HostedZoneId, '' ]]
@@ -213,6 +219,9 @@ Resources:
     Properties:
       DomainName: !Sub ${Domain}
       ValidationMethod: EMAIL
+      DomainValidationOptions:
+        - DomainName: !Sub ${Domain}
+          ValidationDomain: !Sub ${ValidationDomain}
 
   CNAMERecord:
     Type: AWS::Route53::RecordSet
