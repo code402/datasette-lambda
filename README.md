@@ -2,7 +2,7 @@
 
 Run [Datasette](https://github.com/simonw/datasette) on AWS as a serverless application:
 
-<div><a href='//sketchviz.com/@cldellow/81af2bc7bec979e5725f0718e752ac47'><img src='https://sketchviz.com/@cldellow/81af2bc7bec979e5725f0718e752ac47/c8d9beceb2a727d2299c682c7ba8c276f702b8dd.sketchy.png' style='max-width: 100%;'></a></div>
+<div><a href='//sketchviz.com/@cldellow/81af2bc7bec979e5725f0718e752ac47'><img src='https://sketchviz.com/@cldellow/81af2bc7bec979e5725f0718e752ac47/495a2d6933c9d1099afe5136d69a0241342f5639.sketchy.png' style='max-width: 100%;'></a></div>
 
 Sufficiently small databases (unzipped size up to ~250 MB, zipped size up to ~50 MB) will be inlined in the Lambda deployment package. Others will be published to S3 and fetched on Lambda startup.
 
