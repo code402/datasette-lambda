@@ -80,6 +80,7 @@ Resources:
                   - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${AWS::StackName}-${AWS::AccountId}:*
               - Action:
                   - s3:GetObject
+                  - s3:HeadObject
                 Effect: Allow
                 Resource:
                   - !Sub arn:aws:s3:::${Bucket}/*
