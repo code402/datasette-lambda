@@ -17,6 +17,11 @@ sudo yum update -y
 sudo yum install python3 -y
 sudo python3 -m pip install --upgrade pip
 pip3 install datasette mangum -t python/
+# Hack - Amazon Linux 2 has python 3.7 and no pre-built package for 3.8,
+# so we can't use pip to install pysqlite3-binary.
+wget https://files.pythonhosted.org/packages/30/eb/f9fae969ee8ba666ae04fce6a40907f85c8637c2bfddc8fe66261175d456/pysqlite3_binary-0.4.2-cp38-cp38-manylinux1_x86_64.whl
+unzip pysqlite3_binary-0.4.2-cp38-cp38-manylinux1_x86_64.whl
+mv pysqlite3* python/
 chmod -R 755 .
 zip -r package.zip python
 AWS_PROFILE=code402 aws s3 cp package.zip "s3://code402/datasette-${version}.zip"
